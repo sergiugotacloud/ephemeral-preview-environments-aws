@@ -6,7 +6,7 @@ This project implements ephemeral preview environments on AWS using Terraform an
 
 Each pull request automatically provisions an isolated environment where changes can be tested safely. Once the pull request is closed, the entire infrastructure is destroyed to optimize cost.
 
-This simulates a real-world CI/CD workflow used in modern engineering teams.
+This simulates a real-world CI/CD workflow used in modern engineering teams, where environments are short-lived and fully automated.
 
 ---
 
@@ -19,6 +19,10 @@ Developer → GitHub Pull Request → GitHub Actions → Terraform → AWS
 User → Preview URL → Application Load Balancer → ECS → Container
 
 ECR is used to store container images pulled by ECS tasks.
+
+Key principle:
+
+Each Pull Request creates its own isolated environment, which is destroyed after use.
 
 ---
 
@@ -33,7 +37,7 @@ ECR is used to store container images pulled by ECS tasks.
 AWS ECS (Fargate)  
 AWS ECR  
 AWS Application Load Balancer  
-AWS VPC  
+AWS VPC (Public Subnet + Internet Gateway)  
 AWS IAM  
 Docker  
 Terraform  
@@ -65,26 +69,40 @@ ephemeral-preview-environments-aws
 5. AWS infrastructure is created  
 6. Preview URL becomes available  
 
+Result:  
+A fully isolated environment is created for that specific Pull Request.
+
+---
+
 ### When PR is Closed
 
 1. GitHub Actions triggers again  
 2. Terraform runs `destroy`  
 3. All AWS resources are deleted  
 
+Result:  
+The environment is completely removed, leaving no unused infrastructure.
+
 ---
 
 ## 7. Real World Use Case
 
-This architecture is commonly used in teams working on web applications.
+This architecture is commonly used in teams working on web applications and microservices.
 
-Example:
+Example workflow:
 
-A developer submits a feature (e.g. new checkout flow).  
-A temporary environment is created automatically.  
-QA or stakeholders access the Preview URL and test the feature safely.  
-Once approved and merged, the environment is destroyed.
+1. A developer creates a feature branch (e.g. new checkout flow)  
+2. A Pull Request is opened  
+3. A temporary environment is created automatically  
+4. QA or stakeholders access the Preview URL and test the feature  
+5. Once approved, the PR is merged  
+6. The environment is destroyed automatically  
 
-This prevents conflicts and ensures production stability.
+This prevents:
+
+- Environment conflicts between developers  
+- Breaking shared staging environments  
+- Deploying untested changes to production  
 
 ---
 
@@ -92,17 +110,17 @@ This prevents conflicts and ensures production stability.
 
 ### Docker Build
 
-![Docker](screenshots/02_docker_build.png)
+![Docker](screenshots/02_docker_build_success.png)
 
 ### ECS Service Running
 
-![ECS](screenshots/08_ecs_service.png)
+![ECS](screenshots/08_ecs_service_running.png)
 
 ### Application Live
 
-![App](screenshots/11_preview_live.png)
+![App](screenshots/11_application_live_browser.png)
 
-### Terraform Destroy
+### Terraform Destroy (Cleanup)
 
 ![Destroy](screenshots/12_terraform_destroy_cleanup.png)
 
@@ -130,7 +148,6 @@ Incorrect container port configuration in task definition.
 ### Solution  
 Aligned container port with ALB target group configuration.
 
-
 ---
 
 ### Problem  
@@ -142,7 +159,6 @@ Security group did not allow inbound HTTP traffic.
 ### Solution  
 Updated security group to allow port 80 access.
 
-
 ---
 
 ### Problem  
@@ -153,7 +169,6 @@ ECS service dependencies prevented immediate deletion.
 
 ### Solution  
 Waited for ECS service to scale down before full cleanup.
-
 
 ---
 
@@ -168,22 +183,82 @@ Corrected repository URI and ensured image push completed before deployment.
 
 ---
 
-## 11. Lessons Learned
+## 11. Failure Scenarios and System Behavior
 
-Infrastructure must be designed with destruction in mind  
-ALB must be correctly linked to target groups  
-IAM roles are critical for ECS task execution  
-ECR image references must be precise  
-Ephemeral environments significantly reduce cost  
+### ECS Task Failure
+
+If the container fails to start:
+
+- ECS attempts to restart the task automatically  
+- ALB health checks fail  
+- Traffic is not routed to unhealthy tasks  
+
+Result:  
+Service remains unavailable until a healthy task is running.
 
 ---
 
-## 12. Author
+### ALB Health Check Misconfiguration
+
+If health check path or port is incorrect:
+
+- ALB marks all targets as unhealthy  
+- No traffic is routed  
+
+Fix:  
+Ensure health check matches application endpoint.
+
+---
+
+### ECR Image Missing
+
+If the image is not available in ECR:
+
+- ECS task fails to start  
+- Deployment fails  
+
+Fix:  
+Ensure image is pushed before Terraform apply.
+
+---
+
+### Terraform Destroy Delays
+
+During destroy:
+
+- ECS service takes time to scale down  
+- ALB and networking dependencies delay deletion  
+
+Observation:  
+Infrastructure deletion is not instant due to AWS dependency handling.
+
+---
+
+### GitHub Actions Failure
+
+If CI/CD fails:
+
+- No infrastructure is created  
+- No preview environment is available  
+
+Fix:  
+Check workflow logs and permissions.
+
+---
+
+## 12. Key Engineering Takeaways
+
+- Infrastructure should be treated as temporary, not permanent  
+- Automation is essential for scalable environments  
+- Systems must be designed for both creation and destruction  
+- Observability is required to debug distributed systems  
+- Clean architecture improves reliability and maintainability  
+
+---
+
+## 13. Author
 
 Sergiu Gota  
 
 AWS Certified Solutions Architect – Associate  
 AWS Certified Cloud Practitioner  
-
-GitHub  
-https://github.com/YOUR_USERNAME
