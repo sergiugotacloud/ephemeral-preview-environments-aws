@@ -108,22 +108,81 @@ This prevents:
 
 ## 8. Screenshots
 
-### Docker Build
+### Repository Overview
 
-![Docker](screenshots/02_docker_build_success.png)
+![Repo](screenshots/00_github_repository_overview.png)
+
+---
+
+### Project Structure
+
+![Structure](screenshots/01_project_structure.png)
+
+---
+
+### Docker Build Success
+
+![Docker Build](screenshots/02_docker_build_success.png)
+
+---
+
+### Local Application Running
+
+![Local App](screenshots/03_local_app_running.png)
+
+---
+
+### ECR Repository with Image
+
+![ECR](screenshots/04_ecr_repository_image.png)
+
+---
+
+### Terraform Initialization
+
+![Terraform Init](screenshots/05_terraform_init_success.png)
+
+---
+
+### VPC and Networking Created
+
+![VPC](screenshots/06_vpc_and_network_created.png)
+
+---
+
+### ECS Cluster Created
+
+![ECS Cluster](screenshots/07_ecs_cluster_created.png)
+
+---
 
 ### ECS Service Running
 
-![ECS](screenshots/08_ecs_service_running.png)
+![ECS Service](screenshots/08_ecs_service_running.png)
 
-### Application Live
+---
 
-![App](screenshots/11_application_live_browser.png)
+### ECS Task Running Details
+
+![Task](screenshots/09_task_running_details.png)
+
+---
+
+### Application Load Balancer Created
+
+![ALB](screenshots/10_alb_created.png)
+
+---
+
+### Live Preview Environment
+
+![Live App](screenshots/11_application_live_browser.png)
+
+---
 
 ### Terraform Destroy (Cleanup)
 
 ![Destroy](screenshots/12_terraform_destroy_cleanup.png)
-
 ---
 
 ## 9. Key Concepts Demonstrated
