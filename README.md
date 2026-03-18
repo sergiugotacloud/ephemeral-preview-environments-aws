@@ -6,11 +6,11 @@
 
 ## This project implements ephemeral preview environments on AWS using Terraform and GitHub Actions.
 
-Each pull request automatically provisions an isolated environment where changes can be tested safely. Once the pull request is closed, the entire infrastructure is destroyed to optimize cost.
+## Each pull request automatically provisions an isolated environment where changes can be tested safely. Once the pull request is closed, the entire infrastructure is destroyed to optimize cost.
 
-This simulates a real-world CI/CD workflow used in modern engineering teams, where environments are short-lived and fully automated.
+## This simulates a real-world CI/CD workflow used in modern engineering teams, where environments are short-lived and fully automated.
 
-## Architecture
+### Architecture
 
 ![Architecture](architecture/13_ephemeral_preview_architecture.png)
 
