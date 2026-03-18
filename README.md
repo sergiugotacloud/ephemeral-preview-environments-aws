@@ -4,7 +4,7 @@
 
 ---
 
-This project implements ephemeral preview environments on AWS using Terraform and GitHub Actions.
+## This project implements ephemeral preview environments on AWS using Terraform and GitHub Actions.
 
 Each pull request automatically provisions an isolated environment where changes can be tested safely. Once the pull request is closed, the entire infrastructure is destroyed to optimize cost.
 
