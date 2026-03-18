@@ -16,7 +16,7 @@
 
 Each pull request automatically provisions a fully isolated AWS environment — its own VPC, ALB, ECS Fargate task, and security groups — provisioned in under 5 minutes via GitHub Actions and Terraform. When the PR is merged or closed, `terraform destroy` runs automatically and removes every resource, leaving zero idle infrastructure.
 
-# **Stack:** Terraform · GitHub Actions · AWS ECS Fargate · ECR · ALB · VPC · IAM · Docker
+## **Stack:** Terraform · GitHub Actions · AWS ECS Fargate · ECR · ALB · VPC · IAM · Docker
 
 ---
 
