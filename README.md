@@ -214,5 +214,5 @@ This project uses a single-AZ public subnet architecture optimised for simplicit
 ## Author
 
 **Sergiu Gota**
-AWS Certified Solutions Architect – Associate · AWS Cloud Practitioner
+AWS Certified Solutions Architect – Associate · AWS Cloud Practitioner    
 [github.com/sergiugotacloud](https://github.com/sergiugotacloud) · [linkedin.com/in/sergiu-gota-cloud](https://linkedin.com/in/sergiu-gota-cloud)
