@@ -10,7 +10,7 @@
 
 ###   This simulates a real-world CI/CD workflow used in modern engineering teams, where environments are short-lived and fully automated.
 
-## Architecture
+# Architecture
 
 ![Architecture](architecture/13_ephemeral_preview_architecture.png)
 
