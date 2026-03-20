@@ -4,23 +4,32 @@
 
 ---
 
-###  This project implements ephemeral preview environments on AWS using Terraform and GitHub Actions.
+## The Problem
 
-###   Each pull request automatically provisions an isolated environment where changes can be tested safely. Once the pull request is closed, the entire infrastructure is destroyed to optimize cost.
+Shared staging environments break teams. One bad push blocks everyone. The standard fix is coordination overhead — "don't touch staging, I'm testing something."
 
-###   This simulates a real-world CI/CD workflow used in modern engineering teams, where environments are short-lived and fully automated.
+This project eliminates that problem. Every pull request provisions its own isolated AWS environment automatically. It's live in under 5 minutes. When the PR closes, everything is destroyed. Zero idle cost. Zero coordination.
 
-# Architecture
+This is a pattern used by companies like Vercel, Render, and Railway — implemented here on AWS with Terraform and GitHub Actions.
 
-![Architecture](architecture/13_ephemeral_preview_architecture.png)
+---
+
+## What It Does
 
 Each pull request automatically provisions a fully isolated AWS environment — its own VPC, ALB, ECS Fargate task, and security groups — provisioned in under 5 minutes via GitHub Actions and Terraform. When the PR is merged or closed, `terraform destroy` runs automatically and removes every resource, leaving zero idle infrastructure.
 
-## **Stack:** Terraform · GitHub Actions · AWS ECS Fargate · ECR · ALB · VPC · IAM · Docker
+**Stack:** Terraform · GitHub Actions · AWS ECS Fargate · ECR · ALB · VPC · IAM · Docker
+
+---
+
+## Architecture
+
+![Architecture](architecture/13_ephemeral_preview_architecture.png)
 
 ---
 
 ## CI/CD Pipeline Flow
+
 ```
 git push → GitHub PR → GitHub Actions → Docker build → ECR push → Terraform apply → Live preview URL
                                                                                            ↓
@@ -37,6 +46,8 @@ Shared staging environments create conflicts when multiple developers are testin
 **Why ECS Fargate over EC2?**
 Fargate removes the need to manage, patch, or right-size EC2 instances. For short-lived environments that spin up and down per PR, Fargate is the correct choice — no capacity planning, no idle compute between PRs, no patching overhead.
 
+Cost: a 0.25 vCPU / 0.5 GB Fargate task running for 4 hours costs approximately $0.04. At 10 active PRs per day, that's ~$0.40/day in compute — negligible against the engineering time lost to a broken shared staging environment.
+
 **Why Terraform over console provisioning?**
 Every resource is defined in code, version-controlled, and reproducible. `terraform apply` creates the environment in under 5 minutes. `terraform destroy` removes it completely. No manual steps, no configuration drift, no orphaned resources.
 
@@ -45,6 +56,27 @@ This project is optimised for simplicity and cost as a preview environment. A pr
 
 **Why separate security groups for ALB and ECS?**
 The ECS security group only accepts inbound traffic from the ALB security group — not from the internet directly. Even in a public subnet, the ECS task is never publicly reachable except through the load balancer. This is least-privilege at the network layer.
+
+**Why explicit `depends_on` ordering for destroy?**
+`terraform destroy` is harder than `terraform apply`. AWS resource dependencies mean deletion order matters — the ALB cannot be removed while ECS tasks are still registered as targets. Without explicit `depends_on`, Terraform attempts parallel deletion and hangs.
+
+Adding ECS-before-ALB ordering resolved this. The debugging process revealed more about how these services interconnect than building them initially did — dependency graphs only become visible when you try to reverse them.
+
+---
+
+## Cost Model
+
+| Resource | Cost when active | Cost when idle |
+|----------|-----------------|----------------|
+| ECS Fargate (0.25 vCPU / 0.5 GB) | ~$0.01/hr | $0.00 |
+| Application Load Balancer | ~$0.008/hr + LCU | $0.00 |
+| VPC / IGW / Subnets | $0.00 | $0.00 |
+| ECR image storage | ~$0.001/GB/month | ~$0.001/GB/month |
+
+**Estimated cost per environment:** ~$0.02–0.05/hour  
+**Cost when no PRs are open:** ~$0.00
+
+The only ongoing cost is ECR image storage (~$0.10/month for a typical image). Everything else is destroyed with the environment.
 
 ---
 
@@ -78,6 +110,7 @@ The ECS security group only accepts inbound traffic from the ALB security group 
 ---
 
 ## AWS Infrastructure
+
 ```
 AWS Cloud
 └── VPC  preview-vpc-1  10.0.0.0/16
@@ -109,6 +142,7 @@ Amazon ECR  (regional managed service — ECS pulls image on task start)
 ---
 
 ## Project Structure
+
 ```
 ephemeral-preview-environments-aws
 ├── architecture/
@@ -158,20 +192,20 @@ ephemeral-preview-environments-aws
 
 ## Challenges & How I Solved Them
 
-**ECS tasks failing to start**
-Cause: container port in the task definition did not match the ALB target group port. ECS was running the container on port 3000 while the target group expected port 80.
+**ECS tasks failing to start**  
+Cause: container port in the task definition did not match the ALB target group port. ECS was running the container on port 3000 while the target group expected port 80.  
 Fix: aligned container port mapping in the task definition with the target group port configuration. Health checks then passed immediately.
 
-**Application not reachable via ALB DNS**
-Cause: the ECS security group was blocking all inbound traffic — no rule existed for port 80.
+**Application not reachable via ALB DNS**  
+Cause: the ECS security group was blocking all inbound traffic — no rule existed for port 80.  
 Fix: added an inbound rule to the ECS security group allowing port 80 from the ALB security group only, not from the internet directly. This also improved the security posture.
 
-**Terraform destroy hanging**
-Cause: ECS service dependencies prevented immediate deletion. Terraform tried to remove the ALB before ECS tasks had terminated.
+**Terraform destroy hanging**  
+Cause: ECS service dependencies prevented immediate deletion. Terraform tried to remove the ALB before ECS tasks had terminated.  
 Fix: added explicit `depends_on` ordering in Terraform to enforce correct destroy sequence — ECS service scales to 0 before ALB deletion is attempted.
 
-**ECR image not found on deploy**
-Cause: the image URI in the ECS task definition referenced the wrong ECR repository tag.
+**ECR image not found on deploy**  
+Cause: the image URI in the ECS task definition referenced the wrong ECR repository tag.  
 Fix: used Terraform output variables to pass the exact ECR image URI into the task definition dynamically, eliminating manual URI references entirely.
 
 ---
@@ -195,6 +229,7 @@ Fix: used Terraform output variables to pass the exact ECR image URI into the ta
 - **Security groups enforce least privilege at the network layer.** ECS tasks are never directly exposed to the internet — all traffic routes through the ALB.
 - **Observability must be designed in from the start.** ALB health checks and ECS task status provide visibility at every layer without additional instrumentation.
 - **Cost and architecture are inseparable.** Ephemeral environments cost nothing when idle. The destroy step is as important as the apply step.
+- **Dependency graphs only become visible when you reverse them.** Building infrastructure teaches you how services connect. Destroying it teaches you how they depend on each other.
 
 ---
 
@@ -204,15 +239,16 @@ This project uses a single-AZ public subnet architecture optimised for simplicit
 
 - **Private subnets** for ECS tasks with a NAT Gateway for outbound traffic
 - **Multi-AZ deployment** with ALB spanning two availability zones
-- **HTTPS** via ACM certificate and Route 53 custom domain
+- **HTTPS** via ACM certificate and Route 53 custom domain per environment (or a wildcard cert)
 - **Secrets Manager** for application secrets rather than environment variables
 - **ECS Service Auto Scaling** based on CPU and memory thresholds
 - **CloudWatch dashboards and SNS alarms** for operational monitoring
+- **Shared NAT Gateway** across environments to reduce the ~$32/month per-NAT cost at scale
 
 ---
 
 ## Author
 
-**Sergiu Gota**
-AWS Certified Solutions Architect – Associate · AWS Cloud Practitioner    
+**Sergiu Gota**  
+AWS Certified Solutions Architect – Associate · AWS Cloud Practitioner  
 [github.com/sergiugotacloud](https://github.com/sergiugotacloud) · [linkedin.com/in/sergiu-gota-cloud](https://linkedin.com/in/sergiu-gota-cloud)
