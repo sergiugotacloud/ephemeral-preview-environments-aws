@@ -1,9 +1,16 @@
 # Ephemeral Preview Environments on AWS
 ### Terraform · GitHub Actions · ECS Fargate · ECR · ALB · VPC · Docker
 
+[![AWS](https://img.shields.io/badge/AWS-Container-orange?logo=amazon-aws)](https://aws.amazon.com/)
+[![Terraform](https://img.shields.io/badge/Terraform-IaC-7B42BC?logo=terraform)](https://www.terraform.io/)
+[![GitHub Actions](https://img.shields.io/badge/GitHub-Actions-2088FF?logo=github-actions)](https://github.com/features/actions)
+[![ECS](https://img.shields.io/badge/Amazon-ECS%20Fargate-yellow?logo=amazon-aws)](https://aws.amazon.com/ecs/)
+[![ECR](https://img.shields.io/badge/Amazon-ECR-FF9900?logo=amazon-aws)](https://aws.amazon.com/ecr/)
+[![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker)](https://www.docker.com/)
+
 ---
 
-## What this is
+## Overview
 
 Shared staging environments are a pain. PRs block each other, someone always breaks it right before a demo, and cleanup never happens. This project spins up a fully isolated AWS environment per pull request — VPC, ALB, ECS task, the whole thing — and tears it down automatically when the PR closes. Under 5 minutes from push to live URL, zero cleanup needed.
 
